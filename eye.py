@@ -1,54 +1,57 @@
-from __future__ import print_function
-import cv2 as cv
-import argparse
-def detectAndDisplay(frame):
-    frame_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    frame_gray = cv.equalizeHist(frame_gray)
-    #-- 얼굴 탐지
-    faces = face_cascade.detectMultiScale(frame_gray)
-    for (x,y,w,h) in faces:
-        center = (x + w//2, y + h//2)
-        frame = cv.ellipse(frame, center, (w//2, h//2), 0, 0, 360, (255, 0, 255), 4)
-        faceROI = frame_gray[y:y+h,x:x+w]
-        #-- 얼굴에서 눈 탐지
-        eyes = eyes_cascade.detectMultiScale(faceROI)
-        for (x2,y2,w2,h2) in eyes:
-            eye_center = (x + x2 + w2//2, y + y2 + h2//2)
-            radius = int(round((w2 + h2)*0.25))
-            frame = cv.circle(frame, eye_center, radius, (255, 0, 0 ), 4)
-    cv.imshow('Capture - Face detection', frame)
-parser = argparse.ArgumentParser(description='Code for Cascade Classifier tutorial.')
-#-- 데이터 파일 경로(본인 환경에 맞게 변경)
-parser.add_argument('--face_cascade', help='Path to face cascade.', default='data/haarcascades/haarcascade_frontalface_alt.xml')
-parser.add_argument('--eyes_cascade', help='Path to eyes cascade.', default='data/haarcascades/haarcascade_eye_tree_eyeglasses.xml')
-parser.add_argument('--camera', help='Camera divide number.', type=int, default=0)
-args = parser.parse_args()
-face_cascade_name = args.face_cascade
-eyes_cascade_name = args.eyes_cascade
-face_cascade = cv.CascadeClassifier()
-eyes_cascade = cv.CascadeClassifier()
-
-#-- 데이터 파일 읽어오기
-if not face_cascade.load(cv.samples.findFile(face_cascade_name)):
-    print('--(!)Error loading face cascade')
-    exit(0)
-if not eyes_cascade.load(cv.samples.findFile(eyes_cascade_name)):
-    print('--(!)Error loading eyes cascade')
-    exit(0)
-camera_device = args.camera
-
-#-- 비디오 or 캠 불러오기
-cap = cv.VideoCapture(camera_device)
-if not cap.isOpened:
-    print('--(!)Error opening video capture')
-    exit(0)
-while True:
-    ret, frame = cap.read()
-    if frame is None:
-        print('--(!) No captured frame -- Break!')
-        break
-    detectAndDisplay(frame)
-
-#-- q 입력시 종료
-    if cv.waitKey(1) & 0xFF == ord('q'):
-        break
+## -*- coding: utf-8 -*-  # 한글 주석쓸려면 적기
+ 
+import cv2
+ 
+font = cv2.FONT_ITALIC
+ 
+def faceDetect():
+    eye_detect = False
+    face_cascade = cv2.CascadeClassifier("./haarcascade_frontalface_default.xml")  # 얼굴찾기 haar 파일
+    eye_cascade = cv2.CascadeClassifier("./haarcascade_eye.xml") # 눈찾기 haar 파일
+ 
+    try:
+        cam = cv2.VideoCapture(0)
+    except:
+        print("camera loading error")
+        return
+ 
+    while True:
+        ret, frame = cam.read()
+        if not ret:
+            break
+ 
+        if eye_detect:
+            info = "Eye Detention ON"
+        else:
+            info = "Eye Detection OFF"
+ 
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        faces = face_cascade.detectMultiScale(gray,1.3, 5)
+ 
+        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
+ 
+        #카메라 영상 왼쪽위에 위에 셋팅된 info 의 내용 출력
+        cv2.putText(frame, info, (5,15), font, 0.5, (255,0, 255),1)
+ 
+        for(x,y, w,h) in faces:
+            cv2.rectangle(frame, (x,y), (x+w, y+h), (255,0,0), 2)  #사각형 범위
+            cv2.putText(frame, "Detected Face", (x-5, y-5), font, 0.5, (255,255,0),2)  #얼굴찾았다는 메시지
+            if eye_detect:  #눈찾기
+                roi_gray = gray[y:y+h, x:x+w]
+                roi_color = frame[y:y+h, x:x+w]
+                eyes = eye_cascade.detectMultiScale(roi_gray)
+                for (ex,ey,ew,eh) in eyes:
+                    cv2.rectangle(roi_color, (ex, ey), (ex+ew, ey+eh), (0,255,0), 2)
+ 
+        cv2.imshow("frame", frame)
+        k=cv2.waitKey(30)
+ 
+        #실행 중 키보드 i 를 누르면 눈찾기를 on, off한다.
+        if k == ord('i'):
+            eye_detect = not eye_detect
+        if k == 27:
+            break
+    cam.release()
+    cv2.destroyAllWindows()
+ 
+faceDetect()
